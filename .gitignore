@@ -1,0 +1,28 @@
+# ABOUTME: Git ignore rules for the ip-read-recently project.
+# ABOUTME: Covers Python artifacts, virtual environments, and editor files.
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+
+# Editor/IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+secrets.toml
