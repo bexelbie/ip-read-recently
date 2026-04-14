@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch, PropertyMock
 import pytest
 
 from instapyper.exceptions import RateLimitError, InstapaperError
-from instapyper.models import Bookmark, Folder, Highlight
+from instapyper.models import Bookmark, Folder, Highlight, BookmarksResponse
 
 from ip_read_recently.client import Client, Article, ArticleHighlight, AuthError
 from ip_read_recently.config import Config
@@ -57,6 +57,7 @@ def _make_highlight(
     position: int = 0,
     time: int = 1712345700,
     bookmark_id: int = 1,
+    note: str = "",
 ) -> MagicMock:
     """Create a mock Highlight object."""
     h = MagicMock(spec=Highlight)
@@ -65,6 +66,7 @@ def _make_highlight(
     h.position = position
     h.time = time
     h.bookmark_id = bookmark_id
+    h.note = note
     return h
 
 
@@ -72,27 +74,16 @@ class TestAuthentication:
     """Authentication path selection."""
 
     @patch("ip_read_recently.client.Instapaper")
-    def test_auth_with_tokens(self, mock_cls):
-        mock_api = mock_cls.return_value
-        cfg = _make_config(oauth_token="tok", oauth_token_secret="sec")
-        client = Client(cfg)
-        client.authenticate()
-        mock_api.login_with_token.assert_called_once_with("tok", "sec")
-        mock_api.login.assert_not_called()
-
-    @patch("ip_read_recently.client.Instapaper")
     def test_auth_with_username_password(self, mock_cls):
         mock_api = mock_cls.return_value
-        cfg = _make_config(oauth_token="", oauth_token_secret="")
+        cfg = _make_config()
         client = Client(cfg)
         client.authenticate()
         mock_api.login.assert_called_once_with("user@test.com", "pass123")
 
     @patch("ip_read_recently.client.Instapaper")
     def test_auth_raises_when_no_credentials(self, mock_cls):
-        cfg = _make_config(
-            username="", password="", oauth_token="", oauth_token_secret=""
-        )
+        cfg = _make_config(username="", password="")
         client = Client(cfg)
         with pytest.raises(AuthError, match="No credentials configured"):
             client.authenticate()
@@ -195,9 +186,10 @@ class TestFetchArticles:
         mock_api = mock_cls.return_value
         bm_new = _make_bookmark(bookmark_id=1, title="New", time=2000)
         bm_old = _make_bookmark(bookmark_id=2, title="Old", time=1000)
-        mock_api.get_bookmarks.return_value = [bm_new, bm_old]
-        bm_new.get_highlights.return_value = []
-        bm_old.get_highlights.return_value = []
+        response = MagicMock(spec=BookmarksResponse)
+        response.bookmarks = [bm_new, bm_old]
+        response.highlights = []
+        mock_api.get_bookmarks_with_highlights.return_value = response
 
         client = Client(_make_config())
         articles = client.fetch_articles(folder_id=100)
@@ -206,13 +198,15 @@ class TestFetchArticles:
         assert articles[1].title == "New"
 
     @patch("ip_read_recently.client.Instapaper")
-    def test_collects_highlights(self, mock_cls):
+    def test_collects_highlights_from_inline_response(self, mock_cls):
         mock_api = mock_cls.return_value
         bm = _make_bookmark(bookmark_id=1)
-        mock_api.get_bookmarks.return_value = [bm]
-        h1 = _make_highlight(highlight_id=10, text="passage one", position=0)
-        h2 = _make_highlight(highlight_id=11, text="passage two", position=1)
-        bm.get_highlights.return_value = [h1, h2]
+        h1 = _make_highlight(highlight_id=10, text="passage one", position=0, bookmark_id=1)
+        h2 = _make_highlight(highlight_id=11, text="passage two", position=1, bookmark_id=1)
+        response = MagicMock(spec=BookmarksResponse)
+        response.bookmarks = [bm]
+        response.highlights = [h1, h2]
+        mock_api.get_bookmarks_with_highlights.return_value = response
 
         client = Client(_make_config())
         articles = client.fetch_articles(folder_id=100)
@@ -221,15 +215,32 @@ class TestFetchArticles:
         assert articles[0].highlights[1].text == "passage two"
 
     @patch("ip_read_recently.client.Instapaper")
-    def test_highlight_failure_returns_empty_list(self, mock_cls):
+    def test_empty_bookmarks_returns_empty(self, mock_cls):
         mock_api = mock_cls.return_value
-        bm = _make_bookmark(bookmark_id=1)
-        mock_api.get_bookmarks.return_value = [bm]
-        bm.get_highlights.side_effect = InstapaperError("server error")
+        response = MagicMock(spec=BookmarksResponse)
+        response.bookmarks = []
+        response.highlights = []
+        mock_api.get_bookmarks_with_highlights.return_value = response
 
         client = Client(_make_config())
         articles = client.fetch_articles(folder_id=100)
-        assert articles[0].highlights == []
+        assert articles == []
+
+    @patch("ip_read_recently.client.Instapaper")
+    def test_highlights_with_notes(self, mock_cls):
+        mock_api = mock_cls.return_value
+        bm = _make_bookmark(bookmark_id=1)
+        h = _make_highlight(
+            highlight_id=10, text="passage", bookmark_id=1, note="my comment"
+        )
+        response = MagicMock(spec=BookmarksResponse)
+        response.bookmarks = [bm]
+        response.highlights = [h]
+        mock_api.get_bookmarks_with_highlights.return_value = response
+
+        client = Client(_make_config())
+        articles = client.fetch_articles(folder_id=100)
+        assert articles[0].highlights[0].note == "my comment"
 
 
 class TestMoveBookmarks:

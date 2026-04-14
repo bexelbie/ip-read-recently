@@ -222,3 +222,36 @@ class TestRender:
         assert "title:" in front_matter
         assert "date:" in front_matter
         assert "excerpt:" in front_matter
+
+    def test_renders_highlight_with_note(self):
+        articles = [
+            _article(
+                highlights=[
+                    ArticleHighlight(
+                        text="a key passage", position=0, time=100, note="my comment"
+                    )
+                ],
+            )
+        ]
+        output = render(articles)
+        assert "> a key passage" in output
+        assert "_my comment_" in output
+
+    def test_renders_highlight_without_note(self):
+        articles = [
+            _article(
+                highlights=[
+                    ArticleHighlight(text="just a highlight", position=0, time=100)
+                ],
+            )
+        ]
+        output = render(articles)
+        assert "> just a highlight" in output
+        # No italic note marker should appear for empty note
+        lines = output.split("\n")
+        highlight_idx = next(
+            i for i, line in enumerate(lines) if "> just a highlight" in line
+        )
+        # The line after the highlight should not be an italic note
+        remaining = "\n".join(lines[highlight_idx + 1 : highlight_idx + 3])
+        assert "_" not in remaining or remaining.strip().startswith("_No")

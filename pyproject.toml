@@ -8,7 +8,7 @@ authors = [
 license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
-    "instapyper>=0.0.3",
+    "instapyper @ git+https://github.com/bexelbie/instapyper.git@bex-main",
     "jinja2>=3.1",
     "tomli>=2.0; python_version < '3.11'",
 ]

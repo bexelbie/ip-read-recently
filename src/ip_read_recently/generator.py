@@ -99,6 +99,7 @@ def build_context(articles: list[Article]) -> dict[str, Any]:
                 "text": clean_highlight_text(h.text),
                 "position": h.position,
                 "time": h.time,
+                "note": h.note,
             }
             for h in article.highlights
         ]
@@ -131,13 +132,19 @@ def _load_template(template_path: str | None = None) -> jinja2.Template:
         env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(str(path.parent)),
             keep_trailing_newline=True,
+            trim_blocks=True,
+            lstrip_blocks=True,
         )
         return env.get_template(path.name)
 
     # Load built-in default template
     templates_dir = resources.files("ip_read_recently") / "templates"
     template_text = (templates_dir / "default.md.j2").read_text(encoding="utf-8")
-    env = jinja2.Environment(keep_trailing_newline=True)
+    env = jinja2.Environment(
+        keep_trailing_newline=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
     return env.from_string(template_text)
 
 

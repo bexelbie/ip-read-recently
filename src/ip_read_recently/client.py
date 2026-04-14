@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from instapyper import Instapaper
 from instapyper.exceptions import InstapaperError, RateLimitError
-from instapyper.models import Bookmark, Folder, Highlight
+from instapyper.models import Bookmark, Folder, Highlight, BookmarksResponse
 
 from .config import Config
 
@@ -26,6 +26,7 @@ class ArticleHighlight:
     text: str
     position: int
     time: int
+    note: str = ""
 
 
 @dataclass
@@ -48,19 +49,14 @@ class Client:
         self._api = Instapaper(config.consumer_key, config.consumer_secret)
 
     def authenticate(self) -> None:
-        """Log in using saved tokens or username/password."""
-        if self._config.oauth_token and self._config.oauth_token_secret:
-            self._api.login_with_token(
-                self._config.oauth_token, self._config.oauth_token_secret
-            )
-            logger.info("Authenticated with saved OAuth tokens")
-        elif self._config.username and self._config.password:
+        """Log in with username and password via xAuth."""
+        if self._config.username and self._config.password:
             self._api.login(self._config.username, self._config.password)
             logger.info("Authenticated with username/password")
         else:
             raise AuthError(
-                "No credentials configured. Provide oauth_token/oauth_token_secret "
-                "or username/password in config file or environment variables."
+                "No credentials configured. Provide username/password "
+                "in config file or environment variables."
             )
 
     def get_folders(self) -> list[Folder]:
@@ -87,6 +83,14 @@ class Client:
         logger.info("Folder '%s' not found, creating it", name)
         return self.create_folder(name)
 
+    def get_bookmarks_with_highlights(
+        self, folder_id: int, limit: int = 500
+    ) -> BookmarksResponse:
+        """Fetch bookmarks and their inline highlights in a single API call."""
+        return self._retry(
+            lambda: self._api.get_bookmarks_with_highlights(folder=folder_id, limit=limit)
+        )
+
     def get_bookmarks(self, folder_id: int, limit: int = 500) -> list[Bookmark]:
         """Fetch bookmarks from a folder."""
         return self._retry(lambda: self._api.get_bookmarks(folder=folder_id, limit=limit))
@@ -102,23 +106,28 @@ class Client:
     def fetch_articles(self, folder_id: int) -> list[Article]:
         """Fetch all bookmarks from a folder and collect their highlights.
 
+        Uses a single API call to get bookmarks and inline highlights together,
+        avoiding per-bookmark highlight requests.
         Returns Article objects sorted by save date (oldest first).
         """
-        bookmarks = self.get_bookmarks(folder_id)
-        articles: list[Article] = []
+        response = self.get_bookmarks_with_highlights(folder_id)
 
-        for bm in bookmarks:
-            highlights = self._fetch_highlights_safe(bm)
+        highlights_by_bookmark: dict[int, list[ArticleHighlight]] = {}
+        for h in response.highlights:
+            ah = ArticleHighlight(
+                text=h.text, position=h.position, time=h.time, note=h.note
+            )
+            highlights_by_bookmark.setdefault(h.bookmark_id, []).append(ah)
+
+        articles: list[Article] = []
+        for bm in response.bookmarks:
             article = Article(
                 bookmark_id=bm.bookmark_id,
                 title=bm.title,
                 url=bm.url,
                 description=bm.description,
                 time=bm.time,
-                highlights=[
-                    ArticleHighlight(text=h.text, position=h.position, time=h.time)
-                    for h in highlights
-                ],
+                highlights=highlights_by_bookmark.get(bm.bookmark_id, []),
             )
             articles.append(article)
 
@@ -143,19 +152,6 @@ class Client:
                 logger.warning(msg)
                 errors.append(msg)
         return success, errors
-
-    def _fetch_highlights_safe(self, bookmark: Bookmark) -> list[Highlight]:
-        """Fetch highlights for a bookmark, returning empty list on failure."""
-        try:
-            return self.get_highlights(bookmark)
-        except (InstapaperError, RateLimitError) as e:
-            logger.warning(
-                "Failed to fetch highlights for bookmark %d (%r): %s",
-                bookmark.bookmark_id,
-                bookmark.title,
-                e,
-            )
-            return []
 
     def _retry(self, fn: callable, max_retries: int = MAX_RETRIES) -> any:
         """Execute fn with exponential backoff on rate limit errors."""
