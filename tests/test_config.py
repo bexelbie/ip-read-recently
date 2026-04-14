@@ -95,22 +95,6 @@ consumer_key = "ck_only"
         assert cfg.consumer_secret == ""
         assert cfg.source_folder == "read-post"
 
-    def test_oauth_tokens_from_file(self, tmp_path, monkeypatch):
-        for var in ["INSTAPAPER_OAUTH_TOKEN", "INSTAPAPER_OAUTH_TOKEN_SECRET"]:
-            monkeypatch.delenv(var, raising=False)
-
-        config_file = self._write_config(
-            tmp_path / "config.toml",
-            """\
-[instapaper]
-oauth_token = "tok_abc"
-oauth_token_secret = "sec_xyz"
-""",
-        )
-        cfg = load_config(config_path=config_file)
-        assert cfg.oauth_token == "tok_abc"
-        assert cfg.oauth_token_secret == "sec_xyz"
-
 
 class TestEnvVarOverride:
     """Environment variables override file values."""
@@ -136,8 +120,6 @@ consumer_key = "from_file"
             "INSTAPAPER_CONSUMER_SECRET": "es",
             "INSTAPAPER_USERNAME": "eu",
             "INSTAPAPER_PASSWORD": "ep",
-            "INSTAPAPER_OAUTH_TOKEN": "et",
-            "INSTAPAPER_OAUTH_TOKEN_SECRET": "ets",
             "INSTAPAPER_SOURCE_FOLDER": "esf",
             "INSTAPAPER_DEST_FOLDER": "edf",
             "INSTAPAPER_TEMPLATE": "etpl",
@@ -150,8 +132,6 @@ consumer_key = "from_file"
         assert cfg.consumer_secret == "es"
         assert cfg.username == "eu"
         assert cfg.password == "ep"
-        assert cfg.oauth_token == "et"
-        assert cfg.oauth_token_secret == "ets"
         assert cfg.source_folder == "esf"
         assert cfg.dest_folder == "edf"
         assert cfg.template == "etpl"

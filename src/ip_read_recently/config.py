@@ -37,8 +37,6 @@ class Config:
     consumer_secret: str = ""
     username: str = ""
     password: str = ""
-    oauth_token: str = ""
-    oauth_token_secret: str = ""
 
     # Folder names
     source_folder: str = "read-post"
@@ -89,10 +87,6 @@ def load_config(config_path: Path | None = None) -> Config:
         consumer_secret=_resolve("INSTAPAPER_CONSUMER_SECRET", "instapaper", "consumer_secret"),
         username=_resolve("INSTAPAPER_USERNAME", "instapaper", "username"),
         password=_resolve("INSTAPAPER_PASSWORD", "instapaper", "password"),
-        oauth_token=_resolve("INSTAPAPER_OAUTH_TOKEN", "instapaper", "oauth_token"),
-        oauth_token_secret=_resolve(
-            "INSTAPAPER_OAUTH_TOKEN_SECRET", "instapaper", "oauth_token_secret"
-        ),
         source_folder=_resolve(
             "INSTAPAPER_SOURCE_FOLDER", "folders", "source", default="read-post"
         ),
