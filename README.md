@@ -11,16 +11,20 @@ Pull Instapaper bookmarks and highlights into a Markdown reading-list draft.
 
 The output is a draft you edit by hand: sorting articles into thematic sections, adding commentary, trimming highlights.
 
+## Prerequisites
+
+You need an Instapaper API consumer key and secret. Apply at <https://www.instapaper.com/main/request_oauth_consumer_token> — the owner-only key (granted automatically) is sufficient.
+
 ## Installation
 
 ```bash
-# With uv
-uv pip install .
-
-# Or from source
+# Install globally (available from any directory)
 git clone https://github.com/bexelbie/ip-read-recently.git
 cd ip-read-recently
-uv sync
+uv tool install .
+
+# To upgrade after pulling changes
+uv tool install . --force
 ```
 
 ## Configuration
@@ -33,10 +37,6 @@ consumer_key = "your-consumer-key"
 consumer_secret = "your-consumer-secret"
 username = "you@example.com"
 password = "your-password"
-
-# Or use saved OAuth tokens instead of username/password:
-# oauth_token = "..."
-# oauth_token_secret = "..."
 
 [folders]
 source = "read-post"        # folder to pull bookmarks from
@@ -55,8 +55,6 @@ All settings can be overridden with environment variables:
 | `instapaper.consumer_secret` | `INSTAPAPER_CONSUMER_SECRET` |
 | `instapaper.username` | `INSTAPAPER_USERNAME` |
 | `instapaper.password` | `INSTAPAPER_PASSWORD` |
-| `instapaper.oauth_token` | `INSTAPAPER_OAUTH_TOKEN` |
-| `instapaper.oauth_token_secret` | `INSTAPAPER_OAUTH_TOKEN_SECRET` |
 | `folders.source` | `INSTAPAPER_SOURCE_FOLDER` |
 | `folders.destination` | `INSTAPAPER_DEST_FOLDER` |
 
@@ -108,7 +106,7 @@ ip-read-recently move-posted 12345 67890
 
 ## Custom templates
 
-The tool uses Jinja2 templates. The default template produces Jekyll-compatible Markdown with front matter. Override it with `--template path/to/custom.j2`.
+The tool uses Jinja2 templates with `trim_blocks` and `lstrip_blocks` enabled, so block tags (`{% if %}`, `{% for %}`, etc.) don't produce extra blank lines. Override the default template with `--template path/to/custom.j2`.
 
 Template variables available:
 
@@ -131,13 +129,12 @@ Each article has:
 | `description` | Instapaper description (may be empty) |
 | `time` | Unix timestamp (save date) |
 | `time_formatted` | ISO date string |
-| `highlights` | List of `{text, position, time}` dicts |
+| `highlights` | List of `{text, position, time, note}` dicts |
 
 ## Known limitations
 
-- **No batch highlights**: The instapyper library doesn't expose the batch highlights from the `bookmarks/list` response. Each bookmark requires a separate API call for highlights. Fine for typical volumes (5-30 articles).
-- **No tags**: The instapyper `Bookmark` model doesn't parse the tags field from the API response. Tags are not currently available in the template context.
-- **Rate limiting**: With many bookmarks, per-bookmark highlight fetching may hit rate limits. The tool retries with exponential backoff (max 3 attempts).
+- **No tags in template**: The instapyper fork parses tags from the API, but they are not yet exposed in the template context.
+- **Rate limiting**: With many bookmarks, API calls may hit rate limits. The tool retries with exponential backoff (max 3 attempts).
 
 ## Development
 

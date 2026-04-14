@@ -16,6 +16,10 @@ _Sort these into thematic sections before publishing. Delete this heading when d
 {% if article.highlights %}
 {% for highlight in article.highlights %}
 > {{ highlight.text }}
+{% if highlight.note %}
+
+_{{ highlight.note }}_
+{% endif %}
 
 {% endfor %}
 {% endif %}
