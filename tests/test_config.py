@@ -9,15 +9,27 @@ import pytest
 
 from ip_read_recently.config import Config, load_config, default_config_path
 
+CONFIG_ENV_VARS = [
+    "INSTAPAPER_CONSUMER_KEY",
+    "INSTAPAPER_CONSUMER_SECRET",
+    "INSTAPAPER_USERNAME",
+    "INSTAPAPER_PASSWORD",
+    "INSTAPAPER_SOURCE_FOLDER",
+    "INSTAPAPER_DEST_FOLDER",
+    "INSTAPAPER_TEMPLATE",
+    "INSTAPAPER_DATE_FORMAT",
+]
+
 
 class TestDefaults:
     """Config defaults when no file or env vars are present."""
 
     def test_defaults_returned_when_no_file_or_env(self, tmp_path, monkeypatch):
-        monkeypatch.delenv("INSTAPAPER_CONSUMER_KEY", raising=False)
-        monkeypatch.delenv("INSTAPAPER_SOURCE_FOLDER", raising=False)
+        for var in CONFIG_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
         cfg = load_config(config_path=tmp_path / "nonexistent.toml")
         assert cfg.consumer_key == ""
+        assert cfg.consumer_secret == ""
         assert cfg.source_folder == "read-post"
         assert cfg.dest_folder == "posted"
         assert cfg.template == "default"
@@ -42,13 +54,7 @@ class TestFileLoading:
 
     def test_loads_all_sections(self, tmp_path, monkeypatch):
         # Clear env vars that would override
-        for var in [
-            "INSTAPAPER_CONSUMER_KEY", "INSTAPAPER_CONSUMER_SECRET",
-            "INSTAPAPER_USERNAME", "INSTAPAPER_PASSWORD",
-            "INSTAPAPER_OAUTH_TOKEN", "INSTAPAPER_OAUTH_TOKEN_SECRET",
-            "INSTAPAPER_SOURCE_FOLDER", "INSTAPAPER_DEST_FOLDER",
-            "INSTAPAPER_TEMPLATE", "INSTAPAPER_DATE_FORMAT",
-        ]:
+        for var in CONFIG_ENV_VARS:
             monkeypatch.delenv(var, raising=False)
 
         config_file = self._write_config(
@@ -80,7 +86,7 @@ date_format = "today"
         assert cfg.date_format == "today"
 
     def test_partial_file_uses_defaults_for_missing(self, tmp_path, monkeypatch):
-        for var in ["INSTAPAPER_CONSUMER_KEY", "INSTAPAPER_SOURCE_FOLDER"]:
+        for var in CONFIG_ENV_VARS:
             monkeypatch.delenv(var, raising=False)
 
         config_file = self._write_config(
@@ -153,17 +159,19 @@ class TestEdgeCases:
     """Edge cases and error handling."""
 
     def test_missing_file_returns_defaults(self, tmp_path, monkeypatch):
-        for var in ["INSTAPAPER_CONSUMER_KEY", "INSTAPAPER_SOURCE_FOLDER"]:
+        for var in CONFIG_ENV_VARS:
             monkeypatch.delenv(var, raising=False)
         cfg = load_config(config_path=tmp_path / "does_not_exist.toml")
         assert cfg.consumer_key == ""
+        assert cfg.consumer_secret == ""
         assert cfg.source_folder == "read-post"
 
     def test_empty_file_returns_defaults(self, tmp_path, monkeypatch):
-        for var in ["INSTAPAPER_CONSUMER_KEY", "INSTAPAPER_SOURCE_FOLDER"]:
+        for var in CONFIG_ENV_VARS:
             monkeypatch.delenv(var, raising=False)
         config_file = tmp_path / "config.toml"
         config_file.write_text("")
         cfg = load_config(config_path=config_file)
         assert cfg.consumer_key == ""
+        assert cfg.consumer_secret == ""
         assert cfg.source_folder == "read-post"

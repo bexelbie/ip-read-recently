@@ -46,6 +46,19 @@ class TestParser:
         args = parser.parse_args(["move-posted", "123", "456"])
         assert args.command == "move-posted"
         assert args.bookmark_ids == [123, 456]
+        assert args.all is False
+
+    def test_move_posted_with_all(self):
+        parser = _build_parser()
+        args = parser.parse_args(["move-posted", "--all"])
+        assert args.command == "move-posted"
+        assert args.all is True
+        assert args.bookmark_ids == []
+
+    def test_move_posted_requires_ids_or_all(self):
+        parser = _build_parser()
+        with pytest.raises(SystemExit):
+            parser.parse_args(["move-posted"])
 
     def test_no_command_fails(self):
         parser = _build_parser()
@@ -239,3 +252,82 @@ class TestAuthError:
         assert result == 1
         captured = capsys.readouterr()
         assert "Authentication error" in captured.err
+
+
+class TestMovePostedCommand:
+    """move-posted subcommand behavior."""
+
+    @patch("ip_read_recently.cli._connect")
+    def test_move_posted_moves_specific_ids(self, mock_connect, capsys):
+        mock_client = MagicMock()
+        mock_connect.return_value = mock_client
+        mock_dest = MagicMock()
+        mock_dest.folder_id = 200
+        mock_client.ensure_folder.return_value = mock_dest
+
+        result = main(["move-posted", "123", "456"])
+
+        assert result == 0
+        assert mock_client._api.move_bookmark.call_count == 2
+        mock_client._api.move_bookmark.assert_any_call(123, 200)
+        mock_client._api.move_bookmark.assert_any_call(456, 200)
+        mock_client.get_bookmarks.assert_not_called()
+
+        captured = capsys.readouterr()
+        assert "Moved 2/2 bookmarks" in captured.out
+
+    @patch("ip_read_recently.cli._connect")
+    def test_move_posted_all_moves_source_folder_bookmarks(self, mock_connect, capsys):
+        mock_client = MagicMock()
+        mock_connect.return_value = mock_client
+        mock_source = MagicMock()
+        mock_source.folder_id = 100
+        mock_dest = MagicMock()
+        mock_dest.folder_id = 200
+        mock_client.find_folder_by_name.return_value = mock_source
+        mock_client.ensure_folder.return_value = mock_dest
+        bookmarks = [MagicMock(), MagicMock()]
+        mock_client.get_bookmarks.return_value = bookmarks
+        mock_client.move_bookmarks.return_value = (2, [])
+
+        result = main(["move-posted", "--all"])
+
+        assert result == 0
+        mock_client.find_folder_by_name.assert_called_once()
+        mock_client.get_bookmarks.assert_called_once_with(100)
+        mock_client.move_bookmarks.assert_called_once_with(bookmarks, 200)
+        mock_client._api.move_bookmark.assert_not_called()
+
+        captured = capsys.readouterr()
+        assert "Moved 2/2 bookmarks" in captured.out
+
+    @patch("ip_read_recently.cli._connect")
+    def test_move_posted_all_missing_source_folder_exits_one(self, mock_connect, capsys):
+        mock_client = MagicMock()
+        mock_connect.return_value = mock_client
+        mock_client.find_folder_by_name.return_value = None
+
+        result = main(["move-posted", "--all"])
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "not found" in captured.err
+
+    @patch("ip_read_recently.cli._connect")
+    def test_move_posted_all_empty_source_folder_exits_zero(self, mock_connect, capsys):
+        mock_client = MagicMock()
+        mock_connect.return_value = mock_client
+        mock_source = MagicMock()
+        mock_source.folder_id = 100
+        mock_dest = MagicMock()
+        mock_dest.folder_id = 200
+        mock_client.find_folder_by_name.return_value = mock_source
+        mock_client.ensure_folder.return_value = mock_dest
+        mock_client.get_bookmarks.return_value = []
+
+        result = main(["move-posted", "--all"])
+
+        assert result == 0
+        mock_client.move_bookmarks.assert_not_called()
+        captured = capsys.readouterr()
+        assert "No bookmarks found" in captured.out

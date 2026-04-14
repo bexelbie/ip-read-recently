@@ -94,6 +94,9 @@ ip-read-recently list
 
 ```bash
 ip-read-recently move-posted 12345 67890
+
+# Or clear the source folder into the destination folder
+ip-read-recently move-posted --all
 ```
 
 ## Workflow

@@ -82,9 +82,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "move-posted",
         help="Move specific bookmarks to the destination folder",
     )
-    move_parser.add_argument(
+    move_selection = move_parser.add_mutually_exclusive_group(required=True)
+    move_selection.add_argument(
+        "--all",
+        action="store_true",
+        help="Move every bookmark from the configured source folder",
+    )
+    move_selection.add_argument(
         "bookmark_ids",
-        nargs="+",
+        nargs="*",
         type=int,
         help="Bookmark IDs to move",
     )
@@ -193,6 +199,27 @@ def _cmd_move_posted(args: argparse.Namespace, config: Config) -> int:
     client = _connect(config)
 
     dest = client.ensure_folder(config.dest_folder)
+
+    if args.all:
+        source = client.find_folder_by_name(config.source_folder)
+        if source is None:
+            print(
+                f"Error: Source folder '{config.source_folder}' not found. "
+                f"Run 'ip-read-recently setup' to create it.",
+                file=sys.stderr,
+            )
+            return 1
+
+        bookmarks = client.get_bookmarks(source.folder_id)
+        if not bookmarks:
+            print(f"No bookmarks found in folder '{config.source_folder}'.")
+            return 0
+
+        success, errors = client.move_bookmarks(bookmarks, dest.folder_id)
+        print(f"Moved {success}/{len(bookmarks)} bookmarks to '{config.dest_folder}'")
+        for err in errors:
+            print(f"  Warning: {err}", file=sys.stderr)
+        return 0 if not errors else 1
 
     # Move each bookmark by ID
     success = 0
