@@ -63,6 +63,21 @@ Config file: `~/.config/ip-read-recently/config.toml`
 Env vars: `INSTAPAPER_CONSUMER_KEY`, `INSTAPAPER_CONSUMER_SECRET`, etc.
 See README.md for full reference.
 
+## Releasing
+
+GitHub Release notes are generated from the tagged commit message using `.github/workflows/release.yml`.
+
+Flow: bump `version` in `pyproject.toml` → commit with release notes in message → tag with `v*` → push branch and tags.
+
+```bash
+git commit -m "v0.2.0 Release
+
+- Added --all flag to move-posted
+- Added --version flag to CLI"
+git tag v0.2.0
+git push origin main --tags
+```
+
 ## Known limitations
 
 - instapyper Bookmark model doesn't parse tags from API response

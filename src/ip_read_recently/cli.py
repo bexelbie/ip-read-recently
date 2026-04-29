@@ -9,6 +9,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import __version__
 from .client import Article, AuthError, Client
 from .config import Config, load_config
 from .generator import render
@@ -27,6 +28,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ip-read-recently",
         description="Generate Markdown reading-list drafts from Instapaper bookmarks.",
+    )
+    parser.add_argument(
+        "--version", "-V",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
     parser.add_argument(
         "--config",
