@@ -1,3 +1,9 @@
+---
+kind: code
+purpose: Python CLI that pulls Instapaper bookmarks/highlights and generates a Markdown reading-list draft
+visibility: public
+---
+
 # Project Context: ip-read-recently
 
 ## What this is
