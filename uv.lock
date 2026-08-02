@@ -362,14 +362,18 @@ wheels = [
 
 [[package]]
 name = "instapyper"
-version = "0.0.3"
-source = { git = "https://github.com/bexelbie/instapyper.git?rev=bex-main#317cd0c9ff701aad819de4ea6d87fa2bf93fcbef" }
+version = "0.0.6"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "authlib" },
     { name = "httpx" },
     { name = "requests" },
     { name = "requests-oauthlib" },
     { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8a/fd/3003a29d1d27b6130b1596b1e789cfd45e3791f79d4bbf8238d90f35a627/instapyper-0.0.6.tar.gz", hash = "sha256:f3573c3fb2853d7abc2a63ebbf93d253dd0e6756b0649bc7681a8d7744033637", size = 86488, upload-time = "2026-07-30T07:53:21.37Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/4b/bf82cf948bd5cae212fc8d39fdf9c75e1fd23acf40740c809860275b7dce/instapyper-0.0.6-py3-none-any.whl", hash = "sha256:4cc67defb09b2f2ea51e8122834d5b361058729e71531268774d927651cec87d", size = 26782, upload-time = "2026-07-30T07:53:20.009Z" },
 ]
 
 [[package]]
@@ -389,7 +393,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "instapyper", git = "https://github.com/bexelbie/instapyper.git?rev=bex-main" },
+    { name = "instapyper", specifier = ">=0.0.6" },
     { name = "jinja2", specifier = ">=3.1" },
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0" },
 ]
